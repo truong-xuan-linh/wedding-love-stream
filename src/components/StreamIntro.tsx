@@ -1,202 +1,298 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { weddingData } from '@/lib/weddingData';
 
 interface StreamIntroProps {
   onComplete: () => void;
   guestName: string | null;
 }
 
+type Phase = 'sealed' | 'flipping' | 'revealed' | 'exit';
+
+const PETALS = [
+  { left: '8%',  top: '12%', emoji: '🌸', delay: 0 },
+  { left: '22%', top: '72%', emoji: '🌺', delay: 0.6 },
+  { left: '38%', top: '6%',  emoji: '💮', delay: 1.2 },
+  { left: '55%', top: '85%', emoji: '🌷', delay: 0.3 },
+  { left: '70%', top: '18%', emoji: '🌸', delay: 0.9 },
+  { left: '85%', top: '60%', emoji: '🌺', delay: 1.5 },
+  { left: '14%', top: '46%', emoji: '🌷', delay: 1.8 },
+  { left: '92%', top: '35%', emoji: '💮', delay: 0.5 },
+];
+
+const CARD_STYLE: React.CSSProperties = {
+  width: '100%',
+  background: 'linear-gradient(145deg, #fdf8f0 0%, #f7e8cc 55%, #f0d9b0 100%)',
+  borderRadius: '16px',
+  border: '1.5px solid rgba(212,175,55,0.45)',
+  boxShadow: '0 24px 64px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.7)',
+};
+
 export default function StreamIntro({ onComplete, guestName }: StreamIntroProps) {
-  const [progress, setProgress] = useState(0);
-  const [phase, setPhase] = useState<'loading' | 'live' | 'exit'>('loading');
-  const [dots, setDots] = useState('');
+  const [phase, setPhase] = useState<Phase>('sealed');
+  const [flipDone, setFlipDone] = useState(false);
+  const displayName = guestName || 'Bạn';
 
-  // Animated dots
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setDots(d => (d.length >= 3 ? '' : d + '.'));
-    }, 400);
-    return () => clearInterval(interval);
-  }, []);
+  const handleOpen = () => {
+    if (phase !== 'sealed') return;
+    setPhase('flipping');
+    setTimeout(() => setPhase('revealed'), 900);
+  };
 
-  // Progress animation
-  useEffect(() => {
-    const startTime = Date.now();
-    const duration = 2000;
+  const handleEnter = () => {
+    setPhase('exit');
+    setTimeout(onComplete, 700);
+  };
 
-    const animate = () => {
-      const elapsed = Date.now() - startTime;
-      const p = Math.min(99, Math.floor((elapsed / duration) * 99));
-      setProgress(p);
-      if (elapsed < duration) {
-        requestAnimationFrame(animate);
-      }
-    };
-    requestAnimationFrame(animate);
+  const { groom, bride, wedding } = weddingData;
 
-    const timer1 = setTimeout(() => {
-      setProgress(100);
-    }, 2800);
+  /** Nội dung mặt sau thiệp — dùng lại cho cả 3D back-face lẫn plain div */
+  const BackContent = (
+    <>
+      {/* Inner border */}
+      <div style={{
+        position: 'absolute', inset: '10px',
+        border: '1px solid rgba(180,140,30,0.3)',
+        borderRadius: '10px', pointerEvents: 'none',
+      }} />
 
-    const timer2 = setTimeout(() => {
-      setPhase('live');
-    }, 3200);
+      <div className="text-3xl mt-1">💒</div>
 
-    const timer3 = setTimeout(() => {
-      setPhase('exit');
-    }, 5200);
+      <p style={{ fontSize: '10px', letterSpacing: '4px', color: '#A07830', fontFamily: 'var(--font-body)' }}>
+        THIỆP CƯỚI
+      </p>
 
-    const timer4 = setTimeout(() => {
-      onComplete();
-    }, 5700);
+      <div style={{ width: '50px', height: '1px', background: 'linear-gradient(90deg, transparent, #D4AF37, transparent)' }} />
 
-    return () => {
-      clearTimeout(timer1);
-      clearTimeout(timer2);
-      clearTimeout(timer3);
-      clearTimeout(timer4);
-    };
-  }, [onComplete]);
+      <div style={{ textAlign: 'center', lineHeight: 1.65 }}>
+        <p style={{ fontSize: '12px', color: '#7A5828' }}>Trân trọng kính mời</p>
+        <p style={{
+          fontFamily: 'var(--font-display)',
+          fontSize: displayName.length > 14 ? '17px' : '20px',
+          color: '#4A2C00',
+          marginTop: '4px',
+        }}>
+          {displayName}
+        </p>
+        <p style={{ fontSize: '12px', color: '#7A5828', marginTop: '4px' }}>
+          tham dự lễ thành hôn của
+        </p>
+      </div>
+
+      <div style={{ textAlign: 'center', lineHeight: 1.3 }}>
+        <p style={{ fontFamily: 'var(--font-display)', fontSize: '20px', color: '#4A2C00', letterSpacing: '1px' }}>
+          {groom.name}
+        </p>
+        <p style={{ fontSize: '13px', color: '#B8860B', margin: '2px 0' }}>&amp;</p>
+        <p style={{ fontFamily: 'var(--font-display)', fontSize: '20px', color: '#4A2C00', letterSpacing: '1px' }}>
+          {bride.name}
+        </p>
+      </div>
+
+      <div style={{ width: '50px', height: '1px', background: 'linear-gradient(90deg, transparent, #D4AF37, transparent)' }} />
+
+      <div style={{ textAlign: 'center', fontSize: '11.5px', color: '#7A5828', lineHeight: 2 }}>
+        <p>📅 {wedding.dayOfWeek}, {wedding.dateDisplay}</p>
+        <p>⛪ {wedding.venue.ceremony.name} • {wedding.venue.ceremony.time}</p>
+        <p>🏛️ {wedding.venue.reception.name} • {wedding.venue.reception.time}</p>
+      </div>
+
+      <motion.button
+        whileTap={{ scale: 0.94 }}
+        onClick={handleEnter}
+        style={{
+          marginTop: '6px',
+          background: 'linear-gradient(135deg, #C8941A, #D4AF37, #C8941A)',
+          color: 'white',
+          border: 'none',
+          borderRadius: '24px',
+          padding: '10px 28px',
+          fontSize: '13px',
+          fontWeight: 700,
+          cursor: 'pointer',
+          letterSpacing: '0.5px',
+          boxShadow: '0 4px 18px rgba(200,148,26,0.45)',
+          fontFamily: 'var(--font-body)',
+        }}
+      >
+        Vào xem ngay ✨
+      </motion.button>
+    </>
+  );
 
   return (
     <AnimatePresence>
       {phase !== 'exit' && (
         <motion.div
-          key="intro"
+          key="invite-overlay"
           initial={{ opacity: 1 }}
-          exit={{ opacity: 0, scale: 1.05 }}
-          transition={{ duration: 0.5 }}
-          className="fixed inset-0 z-[9999] bg-black flex flex-col items-center justify-center overflow-hidden"
-          onClick={() => {
-            if (phase === 'live') {
-              setPhase('exit');
-              setTimeout(onComplete, 500);
-            }
+          exit={{ opacity: 0, scale: 1.04 }}
+          transition={{ duration: 0.7 }}
+          className="fixed inset-0 z-[9999] flex flex-col items-center justify-center px-6"
+          style={{
+            background: 'radial-gradient(ellipse at 40% 30%, #1e0c08 0%, #0e0808 55%, #050303 100%)',
           }}
         >
-          {/* Background glow */}
-          <div className="absolute inset-0 overflow-hidden">
-            <div
-              className="absolute top-1/4 left-1/2 -translate-x-1/2 w-96 h-96 rounded-full opacity-10"
-              style={{
-                background: 'radial-gradient(circle, #FE2C55 0%, transparent 70%)',
-                filter: 'blur(60px)',
-              }}
-            />
-            <div
-              className="absolute bottom-1/4 left-1/3 w-72 h-72 rounded-full opacity-10"
-              style={{
-                background: 'radial-gradient(circle, #25F4EE 0%, transparent 70%)',
-                filter: 'blur(60px)',
-              }}
-            />
+          {/* Floating petals */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            {PETALS.map((p, i) => (
+              <motion.div
+                key={i}
+                className="absolute text-xl select-none"
+                style={{ left: p.left, top: p.top }}
+                animate={{ y: [0, -18, 0], opacity: [0.25, 0.55, 0.25] }}
+                transition={{ duration: 4 + i * 0.4, repeat: Infinity, delay: p.delay, ease: 'easeInOut' }}
+              >
+                {p.emoji}
+              </motion.div>
+            ))}
           </div>
 
-          {phase === 'loading' ? (
-            <div className="flex flex-col items-center gap-8 px-10 w-full max-w-sm">
-              {/* TikTok-style logo area */}
-              <div className="flex flex-col items-center gap-2">
-                <div className="text-6xl mb-2">💒</div>
-                <div
-                  style={{ fontFamily: 'var(--font-display)', letterSpacing: '2px' }}
-                  className="text-white text-2xl tracking-widest"
-                >
-                  THE LOVE STREAM
-                </div>
-                <div className="text-xs text-gray-400 tracking-[4px] uppercase">
-                  Wedding Live 2026
-                </div>
-              </div>
+          {/* Ambient glow */}
+          <div
+            className="absolute pointer-events-none"
+            style={{
+              top: '15%', left: '50%', transform: 'translateX(-50%)',
+              width: 280, height: 280, borderRadius: '50%',
+              background: 'radial-gradient(circle, rgba(212,175,55,0.07) 0%, transparent 70%)',
+              filter: 'blur(40px)',
+            }}
+          />
 
-              {/* Progress bar */}
-              <div className="w-full">
-                <div className="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden mb-3">
-                  <motion.div
-                    className="h-full shimmer-bar rounded-full"
-                    animate={{ width: `${progress}%` }}
-                    transition={{ ease: 'linear', duration: 0.1 }}
-                  />
-                </div>
-                <div className="flex justify-between text-xs text-gray-500">
-                  <span>Đang kết nối stream{dots}</span>
-                  <span className="font-mono text-pink-500">{progress}%</span>
-                </div>
-              </div>
+          {/* Card area */}
+          <div style={{ width: '100%', maxWidth: '300px' }}>
 
-              {/* Loading hints */}
-              <div className="text-center">
-                {progress < 30 && (
-                  <p className="text-gray-500 text-sm">Đang tải stream{dots}</p>
-                )}
-                {progress >= 30 && progress < 60 && (
-                  <p className="text-gray-500 text-sm">Đang kết nối tới buổi lễ{dots}</p>
-                )}
-                {progress >= 60 && progress < 90 && (
-                  <p className="text-gray-500 text-sm">Đang chuẩn bị hoa cưới{dots}</p>
-                )}
-                {progress >= 90 && progress < 100 && (
-                  <p className="text-yellow-500 text-sm font-semibold">
-                    Gần xong rồi! {progress}%{dots}
-                  </p>
-                )}
-                {progress === 100 && (
-                  <p className="text-green-400 text-sm font-bold">Kết nối thành công! ✓</p>
-                )}
-              </div>
-
-              {/* Guest greeting */}
-              {guestName && (
-                <div className="glass-card px-6 py-3 text-center">
-                  <p className="text-xs text-gray-400 mb-1">Thiệp mời gửi đến</p>
-                  <p className="text-white font-bold text-lg">{guestName}</p>
-                  <p className="text-xs text-pink-400">💌 Bạn được mời đặc biệt</p>
-                </div>
-              )}
-            </div>
-          ) : (
-            // LIVE NOW phase
-            <motion.div
-              initial={{ scale: 0.5, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: 'spring', stiffness: 200, damping: 15 }}
-              className="flex flex-col items-center gap-6 text-center px-8"
-            >
-              {/* Flash effect */}
-              <motion.div
-                initial={{ opacity: 0.8 }}
-                animate={{ opacity: 0 }}
-                transition={{ duration: 0.4 }}
-                className="fixed inset-0 bg-white pointer-events-none"
-              />
-
-              <div className="flex items-center gap-3">
-                <div className="live-badge text-base px-4 py-1.5">
-                  <div className="live-dot" />
-                  LIVE
-                </div>
-              </div>
-
+            {/* ── Sau khi flip xong: plain div, KHÔNG có bất kỳ 3D transform nào ── */}
+            {flipDone ? (
               <div
-                style={{ fontFamily: 'var(--font-display)', letterSpacing: '4px' }}
-                className="text-white leading-none"
+                style={{
+                  ...CARD_STYLE,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  padding: '28px 24px',
+                  gap: '10px',
+                  color: '#5C3A00',
+                  position: 'relative',
+                }}
               >
-                <div className="text-5xl text-glow-red">NOW!</div>
-                <div className="text-3xl text-glow-cyan mt-1">STREAMING</div>
+                {BackContent}
               </div>
+            ) : (
+              /* ── Trong khi sealed / flipping: 3D flip card ── */
+              <div style={{ perspective: '1100px', width: '100%' }}>
+                <motion.div
+                  animate={{
+                    rotateY: phase === 'flipping' || phase === 'revealed' ? 180 : 0,
+                  }}
+                  transition={{ duration: 0.85, ease: [0.4, 0, 0.2, 1] }}
+                  onAnimationComplete={() => {
+                    if (phase === 'revealed') setFlipDone(true);
+                  }}
+                  style={{ transformStyle: 'preserve-3d', position: 'relative', width: '100%', height: '460px' }}
+                >
+                  {/* FRONT */}
+                  <div
+                    onClick={handleOpen}
+                    style={{
+                      ...CARD_STYLE,
+                      backfaceVisibility: 'hidden',
+                      WebkitBackfaceVisibility: 'hidden',
+                      position: 'absolute',
+                      inset: 0,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '14px',
+                      padding: '32px 28px',
+                      userSelect: 'none',
+                    }}
+                  >
+                    <div style={{
+                      position: 'absolute', inset: '10px',
+                      border: '1px solid rgba(180,140,30,0.3)',
+                      borderRadius: '10px', pointerEvents: 'none',
+                    }} />
+                    {(['top-3 left-3', 'top-3 right-3', 'bottom-3 left-3', 'bottom-3 right-3'] as const).map((pos, i) => (
+                      <div
+                        key={i}
+                        className={`absolute ${pos} text-base`}
+                        style={{
+                          color: '#B8860B', opacity: 0.5,
+                          transform: [undefined, 'scaleX(-1)', 'scaleY(-1)', 'scale(-1,-1)'][i] ?? undefined,
+                        }}
+                      >✦</div>
+                    ))}
+                    <motion.div
+                      animate={{ scale: [1, 1.06, 1] }}
+                      transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+                      className="text-5xl"
+                    >💌</motion.div>
+                    <div style={{ textAlign: 'center' }}>
+                      <p style={{ fontSize: '10px', letterSpacing: '3.5px', color: '#A07830', marginBottom: '10px', fontFamily: 'var(--font-body)' }}>
+                        TRÂN TRỌNG KÍNH MỜI
+                      </p>
+                      <p style={{
+                        fontFamily: 'var(--font-display)',
+                        fontSize: displayName.length > 14 ? '20px' : '26px',
+                        color: '#5C3A00',
+                        letterSpacing: '0.5px',
+                        lineHeight: 1.25,
+                      }}>
+                        {displayName}
+                      </p>
+                    </div>
+                    <div style={{ width: '80px', height: '1px', background: 'linear-gradient(90deg, transparent, #D4AF37, transparent)' }} />
+                    <div style={{ textAlign: 'center' }}>
+                      <p style={{ fontSize: '11px', color: '#8B6020', lineHeight: 1.7 }}>Nhân dịp lễ thành hôn của</p>
+                      <p style={{ fontFamily: 'var(--font-display)', fontSize: '14px', color: '#7A5010', letterSpacing: '1px', marginTop: '2px' }}>
+                        {groom.nickname} &amp; {bride.nickname}
+                      </p>
+                    </div>
+                    <motion.p
+                      animate={{ opacity: [0.45, 1, 0.45] }}
+                      transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+                      style={{ fontSize: '11px', color: '#A07830', letterSpacing: '2px', marginTop: '4px' }}
+                    >— Chạm để mở thiệp —</motion.p>
+                  </div>
 
-              <div className="text-3xl">💒💕</div>
-
-              <div className="glass-card px-8 py-4">
-                <p className="text-gray-300 text-sm">Đám cưới trực tiếp của</p>
-                <p className="text-white font-bold text-xl mt-1">Quang Hào &amp; Hồng Nhung</p>
-                <p className="text-pink-400 text-sm mt-1">28.06.2026</p>
+                  {/* BACK (trong 3D container, chỉ dùng khi đang flip) */}
+                  <div
+                    style={{
+                      ...CARD_STYLE,
+                      backfaceVisibility: 'hidden',
+                      WebkitBackfaceVisibility: 'hidden',
+                      transform: 'rotateY(180deg)',
+                      position: 'absolute',
+                      inset: 0,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      padding: '28px 24px',
+                      gap: '10px',
+                      color: '#5C3A00',
+                    }}
+                  >
+                    {BackContent}
+                  </div>
+                </motion.div>
               </div>
+            )}
+          </div>
 
-              <p className="text-gray-400 text-sm animate-pulse">Chạm để vào xem →</p>
-            </motion.div>
-          )}
+          {/* Hashtag */}
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.4 }}
+            transition={{ delay: 0.5 }}
+            style={{ marginTop: '24px', fontSize: '11px', color: '#A07830', letterSpacing: '2px' }}
+          >
+            {wedding.hashtag}
+          </motion.p>
         </motion.div>
       )}
     </AnimatePresence>
