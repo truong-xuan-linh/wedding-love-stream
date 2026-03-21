@@ -12,7 +12,7 @@ export default function HeroSection() {
       {/* Background image */}
       <div className="absolute inset-0">
         <Image
-          src="/images/1.webp"
+          src="/images/6.webp"
           alt="Wedding hero"
           fill
           className="object-cover"
